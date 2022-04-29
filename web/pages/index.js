@@ -1,16 +1,100 @@
 import { useEffect, useRef, useState } from "react";
 import Head from "next/head";
-import { providers } from "ethers";
+import { providers, Contract } from "ethers";
 import Web3Modal from "web3modal";
 import styles from "../styles/Home.module.css";
+import { NFT_CONTRACT_ABI, NFT_CONTRACT_ADDRESS } from "../constants";
 
 export default function Home() {
+  const [isOwner, setIsOwner] = useState(false);
+  const [presaleStarted, setPresaleStarted] = useState(false);
+  const [presaleEnded, setPresaleEnded] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
   const web3ModalRef = useRef();
 
+  const getOwner = async () => {
+    try {
+      const signer = await getProviderOrSigner();
+      //Get an instance of your NFT contract
+      const nftContract = new Contract(
+        NFT_CONTRACT_ADDRESS,
+        NFT_CONTRACT_ABI,
+        signer
+      );
+      const owner = nftContract.owner();
+      const userAddress = signer.getAddress();
+
+      if (owner.toLowerCase() === userAddress.toLowerCase()) {
+        setIsOwner(true);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const startPresale = async () => {
+    try {
+      const signer = await getProviderOrSigner(true);
+      const nftContract = new Contract(
+        NFT_CONTRACT_ADDRESS,
+        NFT_CONTRACT_ABI,
+        signer
+      );
+      const txn = await nftContract.startPresale();
+      await txn.wait();
+      setPresaleStarted(true);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const checkIfPresaleEnded = async () => {
+    try {
+      const provider = await getProviderOrSigner();
+      //Get an instance of your NFT contract
+      const nftContract = new Contract(
+        NFT_CONTRACT_ADDRESS,
+        NFT_CONTRACT_ABI,
+        provider
+      );
+      //This will return a BigNumber because presaleEnded is uint256
+      //Will return a timestamp in seconds
+      const presaleEndTime = await nftContract.presaleEnded();
+      const currentTimeInSeconds = Date.now() / 1000;
+      const hasPresaleEnded = presaleEndTime.lt(
+        Math.floor(currentTimeInSeconds)
+      );
+      setPresaleEnded(hasPresaleEnded);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const checkIfPresaleStarted = async () => {
+    try {
+      const provider = await getProviderOrSigner();
+      //Get an instance of your NFT contract
+      const nftContract = new Contract(
+        NFT_CONTRACT_ADDRESS,
+        NFT_CONTRACT_ABI,
+        provider
+      );
+      const isPresaleStarted = await nftContract.presaleStarted();
+      setPresaleStarted(isPresaleStarted);
+      return isPresaleStarted;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  };
+
   const connectWallet = async () => {
-    await getProviderOrSigner();
-    setWalletConnected(true);
+    try {
+      await getProviderOrSigner();
+      setWalletConnected(true);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const getProviderOrSigner = async (needSigner = false) => {
@@ -33,6 +117,15 @@ export default function Home() {
     return web3Provider;
   };
 
+  const onPageLoad = async () => {
+    connectWallet();
+    await getOwner();
+    const presaleStarted = await checkIfPresaleStarted();
+    if (presaleStarted) {
+      await checkIfPresaleEnded();
+    }
+  };
+
   useEffect(() => {
     if (!walletConnected) {
       web3ModalRef.current = new Web3Modal({
@@ -40,10 +133,35 @@ export default function Home() {
         providerOptions: {},
         disableInjectedProvider: false,
       });
-
-      connectWallet();
+      onPageLoad();
     }
   }, []);
+
+  function renderBody() {
+    if (!walletConnected) {
+      return (
+        <button onClick={connectWallet} className={styles.button}>
+          Connect your Wallet
+        </button>
+      );
+    }
+    if (isOwner && !presaleStarted) {
+      //render button to start the presale
+    }
+
+    if (!presaleStarted) {
+      //just say that presale hasnt started yet, come back later
+    }
+
+    if (presaleStarted && !presaleEnded) {
+      //allow users to mint in presale
+      //they need to be in whitelist for this to work
+    }
+
+    if (presaleEnded) {
+      //allow users to take part in public sale
+    }
+  }
 
   return (
     <div>
@@ -51,13 +169,7 @@ export default function Home() {
         <title>Crypto Devs NFT</title>
       </Head>
 
-      <div className={styles.main}>
-        {walletConnected ? null : (
-          <button onClick={connectWallet} className={styles.button}>
-            Connect Wallet
-          </button>
-        )}
-      </div>
+      <div className={styles.main}></div>
     </div>
   );
 }
