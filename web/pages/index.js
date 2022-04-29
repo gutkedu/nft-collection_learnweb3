@@ -14,15 +14,15 @@ export default function Home() {
 
   const getOwner = async () => {
     try {
-      const signer = await getProviderOrSigner();
+      const signer = await getProviderOrSigner(true);
       //Get an instance of your NFT contract
       const nftContract = new Contract(
         NFT_CONTRACT_ADDRESS,
         NFT_CONTRACT_ABI,
         signer
       );
-      const owner = nftContract.owner();
-      const userAddress = signer.getAddress();
+      const owner = await nftContract.owner();
+      const userAddress = await signer.getAddress();
 
       if (owner.toLowerCase() === userAddress.toLowerCase()) {
         setIsOwner(true);
@@ -147,19 +147,49 @@ export default function Home() {
     }
     if (isOwner && !presaleStarted) {
       //render button to start the presale
+      return (
+        <button onClick={startPresale} className={styles.button}>
+          Start Presale
+        </button>
+      );
     }
 
     if (!presaleStarted) {
       //just say that presale hasnt started yet, come back later
+      return (
+        <div>
+          <span className={styles.description}>
+            Presale has not started yet. Come back later!
+          </span>
+        </div>
+      );
     }
 
     if (presaleStarted && !presaleEnded) {
       //allow users to mint in presale
       //they need to be in whitelist for this to work
+      return (
+        <div>
+          <span className={styles.description}>
+            Presale has started! If your address is whitelisted, you can mint a
+            CryptoDev!
+          </span>
+          <button className={styles.button}> Presale Mint</button>
+        </div>
+      );
     }
 
     if (presaleEnded) {
       //allow users to take part in public sale
+      return (
+        <div>
+          <span className={styles.description}>
+            Presale has ended. You can mint a CryptoDev in public sale, if any
+            remain.
+          </span>
+          <button className={styles.button}> Public Mint</button>
+        </div>
+      );
     }
   }
 
@@ -169,7 +199,7 @@ export default function Home() {
         <title>Crypto Devs NFT</title>
       </Head>
 
-      <div className={styles.main}></div>
+      <div className={styles.main}>{renderBody()}</div>
     </div>
   );
 }
