@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Head from "next/head";
-import { providers, Contract } from "ethers";
+import { providers, Contract, utils } from "ethers";
 import Web3Modal from "web3modal";
 import styles from "../styles/Home.module.css";
 import { NFT_CONTRACT_ABI, NFT_CONTRACT_ADDRESS } from "../constants";
@@ -10,7 +10,71 @@ export default function Home() {
   const [presaleStarted, setPresaleStarted] = useState(false);
   const [presaleEnded, setPresaleEnded] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
+  const [numTokensMinted, setNumTokensMinted] = useState("");
+  const [loading, setLoading] = useState(false);
   const web3ModalRef = useRef();
+
+  const getNumMintedTokens = async () => {
+    try {
+      const provider = await getProviderOrSigner();
+      const nftContract = new Contract(
+        NFT_CONTRACT_ADDRESS,
+        NFT_CONTRACT_ABI,
+        provider
+      );
+
+      const numTokenIds = await nftContract.tokenIds();
+      setNumTokensMinted(numTokenIds.toString());
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const presaleMint = async () => {
+    setLoading(true);
+    try {
+      const signer = await getProviderOrSigner(true);
+      const nftContract = new Contract(
+        NFT_CONTRACT_ADDRESS,
+        NFT_CONTRACT_ABI,
+        signer
+      );
+
+      const txn = await nftContract.presaleMint({
+        value: utils.parseEther("0.01"),
+      });
+
+      await txn.wait();
+
+      window.alert("You sucessfully minted a CryptoDev!");
+    } catch (error) {
+      console.error(error);
+    }
+    setLoading(false);
+  };
+
+  const publicMint = async () => {
+    setLoading(true);
+    try {
+      const signer = await getProviderOrSigner(true);
+      const nftContract = new Contract(
+        NFT_CONTRACT_ADDRESS,
+        NFT_CONTRACT_ABI,
+        signer
+      );
+
+      const txn = await nftContract.mint({
+        value: utils.parseEther("0.01"),
+      });
+
+      await txn.wait();
+
+      window.alert("You sucessfully minted a CryptoDev!");
+    } catch (error) {
+      console.error(error);
+    }
+    setLoading(false);
+  };
 
   const getOwner = async () => {
     try {
@@ -33,6 +97,7 @@ export default function Home() {
   };
 
   const startPresale = async () => {
+    setLoading(true);
     try {
       const signer = await getProviderOrSigner(true);
       const nftContract = new Contract(
@@ -46,6 +111,7 @@ export default function Home() {
     } catch (error) {
       console.error(error);
     }
+    setLoading(false);
   };
 
   const checkIfPresaleEnded = async () => {
@@ -124,6 +190,19 @@ export default function Home() {
     if (presaleStarted) {
       await checkIfPresaleEnded();
     }
+    await getNumMintedTokens();
+    //track in real time the number of minted NFTs
+    setInterval(async () => {
+      await getNumMintedTokens();
+    }, 5 * 1000);
+
+    //track in real time the status of presale(started,ended)
+    setInterval(async () => {
+      const presaleStarted = await checkIfPresaleStarted();
+      if (presaleStarted) {
+        await checkIfPresaleEnded();
+      }
+    }, 5 * 1000);
   };
 
   useEffect(() => {
@@ -145,6 +224,11 @@ export default function Home() {
         </button>
       );
     }
+
+    if (loading) {
+      return <span className={styles.description}>Loading...</span>;
+    }
+
     if (isOwner && !presaleStarted) {
       //render button to start the presale
       return (
@@ -174,7 +258,9 @@ export default function Home() {
             Presale has started! If your address is whitelisted, you can mint a
             CryptoDev!
           </span>
-          <button className={styles.button}> Presale Mint</button>
+          <button className={styles.button} onClick={presaleMint}>
+            Presale Mint
+          </button>
         </div>
       );
     }
@@ -187,7 +273,9 @@ export default function Home() {
             Presale has ended. You can mint a CryptoDev in public sale, if any
             remain.
           </span>
-          <button className={styles.button}> Public Mint</button>
+          <button className={styles.button} onClick={publicMint}>
+            Public Mint
+          </button>
         </div>
       );
     }
@@ -199,7 +287,22 @@ export default function Home() {
         <title>Crypto Devs NFT</title>
       </Head>
 
-      <div className={styles.main}>{renderBody()}</div>
+      <div className={styles.main}>
+        <div>
+          <h1 className={styles.title}>Welcome to CryptoDevs NFT</h1>
+          <div className={styles.description}>
+            CryptoDevs NFT is a collection for developers in Web3
+          </div>
+          <div className={styles.description}>
+            {numTokensMinted}/20 have been minted already!
+          </div>
+          {renderBody()}
+        </div>
+        <img className={styles.image} src="/cryptodevs/0.svg" />
+      </div>
+      <footer className={styles.footer}>
+        Made with &#10084; by Crypto Devs
+      </footer>
     </div>
   );
 }
