@@ -284,22 +284,26 @@ export default function Home() {
   return (
     <div>
       <Head>
-        <title>Crypto Devs NFT</title>
+        <title>Crypto Devs</title>
+        <meta name="description" content="Whitelist-Dapp" />
+        <link rel="icon" href="/favicon.ico" />
       </Head>
-
       <div className={styles.main}>
         <div>
-          <h1 className={styles.title}>Welcome to CryptoDevs NFT</h1>
+          <h1 className={styles.title}>Welcome to Crypto Devs!</h1>
           <div className={styles.description}>
-            CryptoDevs NFT is a collection for developers in Web3
+            Its an NFT collection for developers in Crypto.
           </div>
           <div className={styles.description}>
-            {numTokensMinted}/20 have been minted already!
+            {numTokensMinted}/20 have been minted
           </div>
           {renderBody()}
         </div>
-        <img className={styles.image} src="/cryptodevs/0.svg" />
+        <div>
+          <img className={styles.image} src="./cryptodevs/0.svg" />
+        </div>
       </div>
+
       <footer className={styles.footer}>
         Made with &#10084; by Crypto Devs
       </footer>
